@@ -11,6 +11,35 @@ type Event struct {
 	wg    *sync.WaitGroup
 }
 
+type Subscription struct {
+	done chan struct{}
+	once sync.Once
+	wg sync.WaitGroup
+}
+
+func NewSubscription() *Subscription {
+	return &Subscription{
+		done: make(chan struct{}, 0),
+	}
+}
+
+func (it *Subscription) OnClose(fn func()) {
+	it.wg.Add(1)
+	go func() {
+		defer it.wg.Done()
+		<-it.done
+		fn()
+	}()
+
+}
+
+func (it *Subscription) Close() {
+	it.once.Do(func() {
+		close(it.done)
+	})
+	it.wg.Wait()
+}
+
 // Done calls Done on sync.WaitGroup if set.
 func (e *Event) Done() {
 	if e.wg != nil {
@@ -159,17 +188,17 @@ func (eb *EventBus) PublishOnce(topic string, data interface{}) interface{} {
 }
 
 // Subscribe to a topic passing a EventChannel.
-func (eb *EventBus) Subscribe(topic string) EventChannel {
+func (eb *EventBus) Subscribe(topic string) (EventChannel, *Subscription) {
 	ch := make(EventChannel)
-	eb.SubscribeChannel(topic, ch)
+	unsub := eb.SubscribeChannel(topic, ch)
 
 	eb.stats.incSubscriberCountByTopic(topic)
 
-	return ch
+	return ch, unsub
 }
 
 // SubscribeChannel subscribes to a given Channel.
-func (eb *EventBus) SubscribeChannel(topic string, ch EventChannel) {
+func (eb *EventBus) SubscribeChannel(topic string, ch EventChannel) *Subscription {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
 
@@ -180,12 +209,31 @@ func (eb *EventBus) SubscribeChannel(topic string, ch EventChannel) {
 	}
 
 	eb.stats.incSubscriberCountByTopic(topic)
+
+	sub := NewSubscription()
+	sub.OnClose(func() {
+		eb.mu.Lock()
+		defer eb.mu.Unlock()
+		if subs, ok := eb.subscribers[topic]; ok {
+			index := -1
+			for i, sub := range subs {
+				if sub == ch {
+					index = i
+					break
+				}
+			}
+			if index != -1 {
+				eb.subscribers[topic] = append(subs[:index], subs[index+1:]...)
+			}
+		}
+	})
+	return sub
 }
 
 // SubscribeCallback provides a simple wrapper that allows to directly register CallbackFunc instead of channels.
-func (eb *EventBus) SubscribeCallback(topic string, callable CallbackFunc) {
+func (eb *EventBus) SubscribeCallback(topic string, callable CallbackFunc) *Subscription {
 	ch := NewEventChannel()
-	eb.SubscribeChannel(topic, ch)
+	unsub := eb.SubscribeChannel(topic, ch)
 
 	go func(callable CallbackFunc) {
 		evt := <-ch
@@ -194,6 +242,7 @@ func (eb *EventBus) SubscribeCallback(topic string, callable CallbackFunc) {
 	}(callable)
 
 	eb.stats.incSubscriberCountByTopic(topic)
+	return unsub
 }
 
 // HasSubscribers Check if a topic has subscribers.

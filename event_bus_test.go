@@ -15,9 +15,14 @@ func TestNewEventBus(t *testing.T) {
 
 func TestEventBus_Subscribe(t *testing.T) {
 	ebi := eb.NewEventBus()
-	_ = ebi.Subscribe("foo")
+	_, sub := ebi.Subscribe("foo")
+	_, sub1 := ebi.Subscribe("foo")
 
 	assert.True(t, ebi.HasSubscribers("foo"))
+	sub.Close()
+	assert.True(t, ebi.HasSubscribers("foo"))
+	sub1.Close()
+	assert.False(t, ebi.HasSubscribers("foo"))
 }
 
 func TestEventBus_SubscribeChannel(t *testing.T) {
@@ -34,7 +39,7 @@ func TestEventBus_PublishAsync(t *testing.T) {
 	ebi := eb.NewEventBus()
 	ch1 := eb.NewEventChannel()
 	ebi.SubscribeChannel(testTopicName, ch1)
-	ch2 := ebi.Subscribe("foo:*")
+	ch2, _ := ebi.Subscribe("foo:*")
 
 	var wg sync.WaitGroup
 
@@ -79,7 +84,7 @@ func TestEventBus_Publish(t *testing.T) {
 	ebi := eb.NewEventBus()
 	ch1 := eb.NewEventChannel()
 	ebi.SubscribeChannel(testTopicName, ch1)
-	ch2 := ebi.Subscribe("foo:*")
+	ch2, _ := ebi.Subscribe("foo:*")
 
 	callCounter := eb.NewSafeCounter()
 
