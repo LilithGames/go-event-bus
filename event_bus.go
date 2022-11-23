@@ -90,10 +90,13 @@ func (eb *EventBus) getSubscribingChannels(topic string) eventChannelSlice {
 }
 
 // doPublish is publishing events to channels internally.
-func (eb *EventBus) doPublish(channels eventChannelSlice, evt Event) {
+func (eb *EventBus) doPublish(topic string, evt Event) {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-
+	channels := eb.getSubscribingChannels(topic)
+	if evt.wg != nil {
+		evt.wg.Add(len(channels))
+	}
 	go func(channels eventChannelSlice, evt Event) {
 		for _, ch := range channels {
 			ch <- evt
@@ -139,7 +142,7 @@ func deepMatchRune(str, pattern []rune, simple bool) bool { //nolint:unparam
 // This function returns a bool channel which indicates that all subscribers where called.
 func (eb *EventBus) PublishAsync(topic string, data interface{}) {
 	eb.doPublish(
-		eb.getSubscribingChannels(topic),
+		topic,
 		Event{
 			Data:  data,
 			Topic: topic,
@@ -162,10 +165,8 @@ func (eb *EventBus) PublishAsyncOnce(topic string, data interface{}) {
 // This function creates a waitGroup internally. All subscribers must call Done() function on Event.
 func (eb *EventBus) Publish(topic string, data interface{}) interface{} {
 	wg := sync.WaitGroup{}
-	channels := eb.getSubscribingChannels(topic)
-	wg.Add(len(channels))
 	eb.doPublish(
-		channels,
+		topic,
 		Event{
 			Data:  data,
 			Topic: topic,
