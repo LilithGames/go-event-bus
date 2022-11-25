@@ -2,8 +2,8 @@ package printer_test
 
 import (
 	"bytes"
-	eb "github.com/LilithGames/go-event-bus"
-	"github.com/LilithGames/go-event-bus/printer"
+	eb "github.com/LilithGames/go-event-bus/v4"
+	"github.com/LilithGames/go-event-bus/v4/printer"
 	"github.com/goombaio/namegenerator"
 	"github.com/stretchr/testify/assert"
 	"math/rand"

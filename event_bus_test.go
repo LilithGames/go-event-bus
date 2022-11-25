@@ -1,7 +1,7 @@
 package eventbus_test
 
 import (
-	eb "github.com/LilithGames/go-event-bus"
+	eb "github.com/LilithGames/go-event-bus/v4"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"

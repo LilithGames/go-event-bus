@@ -1,4 +1,4 @@
-module github.com/LilithGames/go-event-bus
+module github.com/LilithGames/go-event-bus/v4
 
 go 1.18
 
