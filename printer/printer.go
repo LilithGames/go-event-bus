@@ -2,7 +2,7 @@ package printer
 
 import (
 	"github.com/cheynewallace/tabby"
-	eb "github.com/dtomasi/go-event-bus/v3"
+	eb "github.com/LilithGames/go-event-bus"
 	"os"
 	"text/tabwriter"
 )

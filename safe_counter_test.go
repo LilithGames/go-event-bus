@@ -1,7 +1,7 @@
 package eventbus_test
 
 import (
-	eb "github.com/dtomasi/go-event-bus/v3"
+	eb "github.com/LilithGames/go-event-bus"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"sync"
